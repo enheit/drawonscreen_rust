@@ -2,6 +2,8 @@ use softbuffer::Context;
 use softbuffer::Surface;
 use std::num::NonZeroU32;
 use std::rc::Rc;
+use std::time::Duration;
+use std::time::Instant;
 use winit::application::ApplicationHandler;
 use winit::event::ElementState;
 use winit::event::MouseButton;
@@ -41,6 +43,10 @@ struct MyApplication {
     redo_stack: Vec<Vec<u32>>,
 
     is_control_key_pressed: bool,
+
+    last_instant: Instant,
+    frame_count: i32,
+    fps: i32,
 }
 
 impl Default for MyApplication {
@@ -60,6 +66,10 @@ impl Default for MyApplication {
             redo_stack: Vec::new(),
 
             is_control_key_pressed: false,
+
+            last_instant: Instant::now(),
+            frame_count: 0,
+            fps: 0,
         }
     }
 }
@@ -99,7 +109,22 @@ impl ApplicationHandler for MyApplication {
             WindowEvent::ModifiersChanged(modifiers) => {
                 self.is_control_key_pressed = modifiers.state().control_key()
             }
-            WindowEvent::RedrawRequested => self.render(),
+            WindowEvent::RedrawRequested => {
+                self.frame_count += 1;
+
+                let now = Instant::now();
+                let duration = now.duration_since(self.last_instant);
+
+                if duration >= Duration::from_secs(1) {
+                    self.fps = self.frame_count;
+                    self.frame_count = 0;
+                    self.last_instant = now;
+
+                    println!("FPS: {}", self.fps);
+                }
+
+                self.render()
+            }
             WindowEvent::KeyboardInput { event, .. } => {
                 if event.state == ElementState::Pressed && !event.repeat {
                     // If button 1 was pressed on keyhboard
@@ -166,8 +191,10 @@ impl ApplicationHandler for MyApplication {
                     self.clear_circle(self.mouse_position, 20.0); // 10.0 is radius
                 }
 
-                if let Some(window) = &self.window {
-                    window.request_redraw();
+                if self.is_right_mouse_down || self.is_left_mouse_down {
+                    if let Some(window) = &self.window {
+                        window.request_redraw();
+                    }
                 }
             }
 
@@ -260,86 +287,44 @@ impl MyApplication {
     }
 
     fn draw_line(&mut self, start: (f64, f64), end: (f64, f64), color: u32) {
-        let (x0, y0) = start;
-        let (x1, y1) = end;
+        let mut x0 = start.0 as i32;
+        let mut y0 = start.1 as i32;
+        let x1 = end.0 as i32;
+        let y1 = end.1 as i32;
 
-        let ipart = |x: f64| x.floor();
-        let round = |x: f64| ipart(x + 0.5);
-        let fpart = |x: f64| x - x.floor();
-        let rfpart = |x: f64| 1.0 - fpart(x);
+        let dx = (x1 - x0).abs();
+        let dy = (y1 - y0).abs();
 
-        let plot = |this: &mut Self, x: f64, y: f64, c: f64| {
-            let alpha = (c.clamp(0.0, 1.0) * 255.0).round() as u32;
-            let base = color & 0x00FFFFFF;
-            let blended = (alpha << 24) | base; // ARGB format
-            this.draw_pixel(x as u32, y as u32, blended);
-        };
+        let step_x = if x0 < x1 { 1 } else { -1 };
+        let step_y = if y0 < y1 { 1 } else { -1 };
 
-        let mut x0 = x0;
-        let mut y0 = y0;
-        let mut x1 = x1;
-        let mut y1 = y1;
+        let mut error = dx - dy;
 
-        let steep = (y1 - y0).abs() > (x1 - x0).abs();
-
-        if steep {
-            std::mem::swap(&mut x0, &mut y0);
-            std::mem::swap(&mut x1, &mut y1);
-        }
-
-        if x0 > x1 {
-            std::mem::swap(&mut x0, &mut x1);
-            std::mem::swap(&mut y0, &mut y1);
-        }
-
-        let dx = x1 - x0;
-        let dy = y1 - y0;
-        let gradient = if dx == 0.0 { 1.0 } else { dy / dx };
-
-        // first endpoint
-        let xend = round(x0);
-        let yend = y0 + gradient * (xend - x0);
-        let xgap = rfpart(x0 + 0.5);
-        let xpxl1 = xend;
-        let ypxl1 = ipart(yend);
-
-        if steep {
-            plot(self, ypxl1, xpxl1, rfpart(yend) * xgap);
-            plot(self, ypxl1 + 1.0, xpxl1, fpart(yend) * xgap);
-        } else {
-            plot(self, xpxl1, ypxl1, rfpart(yend) * xgap);
-            plot(self, xpxl1, ypxl1 + 1.0, fpart(yend) * xgap);
-        }
-
-        let mut intery = yend + gradient;
-
-        // second endpoint
-        let xend = round(x1);
-        let yend = y1 + gradient * (xend - x1);
-        let xgap = fpart(x1 + 0.5);
-        let xpxl2 = xend;
-        let ypxl2 = ipart(yend);
-
-        if steep {
-            plot(self, ypxl2, xpxl2, rfpart(yend) * xgap);
-            plot(self, ypxl2 + 1.0, xpxl2, fpart(yend) * xgap);
-        } else {
-            plot(self, xpxl2, ypxl2, rfpart(yend) * xgap);
-            plot(self, xpxl2, ypxl2 + 1.0, fpart(yend) * xgap);
-        }
-
-        // main loop
-        if steep {
-            for x in (xpxl1 as u32 + 1)..(xpxl2 as u32) {
-                plot(self, ipart(intery), x as f64, rfpart(intery));
-                plot(self, ipart(intery) + 1.0, x as f64, fpart(intery));
-                intery += gradient;
+        loop {
+            // Draw the current pixel
+            if x0 >= 0
+                && y0 >= 0
+                && x0 < self.window_size.0 as i32
+                && y0 < self.window_size.1 as i32
+            {
+                self.draw_pixel(x0 as u32, y0 as u32, color);
             }
-        } else {
-            for x in (xpxl1 as u32 + 1)..(xpxl2 as u32) {
-                plot(self, x as f64, ipart(intery), rfpart(intery));
-                plot(self, x as f64, ipart(intery) + 1.0, fpart(intery));
-                intery += gradient;
+
+            // Check if we've reached the end point
+            if x0 == x1 && y0 == y1 {
+                break;
+            }
+
+            let error2 = 2 * error;
+
+            if error2 > -dy {
+                error -= dy;
+                x0 += step_x;
+            }
+
+            if error2 < dx {
+                error += dx;
+                y0 += step_y;
             }
         }
     }
