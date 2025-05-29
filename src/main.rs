@@ -366,6 +366,11 @@ impl MyApplication {
 fn main() -> Result<(), impl std::error::Error> {
     let event_loop = EventLoop::new().unwrap();
 
+    // Force x11 backend
+    unsafe {
+        std::env::set_var("WINIT_UNIX_BACKEND", "x11");
+    }
+
     let mut my_applicaiton = MyApplication::default();
 
     event_loop.run_app(&mut my_applicaiton)
