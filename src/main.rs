@@ -106,6 +106,7 @@ impl ApplicationHandler for DrawOnScreen {
         event: event::WindowEvent,
     ) {
         match event {
+            WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {
                 println!("[RedrawRequested]");
 
