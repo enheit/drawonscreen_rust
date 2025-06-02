@@ -132,22 +132,22 @@ impl ApplicationHandler for DrawOnScreen {
                 is_synthetic,
             } => {
                 if !event.repeat && event.state == ElementState::Pressed {
-                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit0) {
+                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit1) {
                         self.color_state = ColorState::White;
                         println!("White");
                     }
 
-                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit1) {
+                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit2) {
                         self.color_state = ColorState::Red;
                         println!("Red");
                     }
 
-                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit2) {
+                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit3) {
                         self.color_state = ColorState::Green;
                         println!("Green");
                     }
 
-                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit3) {
+                    if event.physical_key == PhysicalKey::Code(KeyCode::Digit4) {
                         self.color_state = ColorState::Blue;
                         println!("Blue");
                     }
