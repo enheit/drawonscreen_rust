@@ -1,3 +1,23 @@
+![image](https://github.com/user-attachments/assets/fb890aed-33a7-426c-8ea9-6a508439f3b1)
+
+
+# Draw On Screen
+
+Lightweight on-screen drawing tool for Arch Linux. Supports freehand drawing with multiple color options
+
+## Instalation
+
+```
+yay -S draw-on-screen
+```
+
+## Usage
+After installation run this in terminal
+
+```
+drawonscreen_rust
+```
+
 ## Keybindings
 `1` - Red  
 `2` - Green  
@@ -23,3 +43,6 @@ No
 
 ### Will it support configuration in the future?
 Probably, yes
+
+## License
+MIT
