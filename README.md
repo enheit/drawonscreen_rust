@@ -1,9 +1,8 @@
-![image](https://github.com/user-attachments/assets/fb890aed-33a7-426c-8ea9-6a508439f3b1)
-
-
 # Draw On Screen
 
 Lightweight on-screen drawing tool for Arch Linux. Supports freehand drawing with multiple color options
+
+![image](https://github.com/user-attachments/assets/fb890aed-33a7-426c-8ea9-6a508439f3b1)
 
 ## Instalation
 
